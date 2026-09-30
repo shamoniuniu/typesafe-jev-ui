@@ -237,7 +237,12 @@ textarea:focus, input:focus, select:focus {
   box-shadow: 0 0 0 3px rgba(108,124,255,.1), 0 0 18px rgba(108,124,255,.07);
 }
 textarea:disabled, input:disabled, select:disabled { cursor: not-allowed; opacity: .55; }
-textarea::placeholder, input::placeholder { color: #596783; opacity: 1; }
+textarea::placeholder, input::placeholder {
+  color: #667692;
+  opacity: 1;
+  font-size: 12px;
+}
+.code-editor::placeholder { font-size: 13px; }
 input.invalid, .code-editor.invalid { border-color: var(--red); }
 .field-error { display: block; margin: 5px 0 0; color: var(--red); font-weight: 400; }
 .code-editor {
