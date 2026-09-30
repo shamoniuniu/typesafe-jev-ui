@@ -18,12 +18,45 @@ interface QuestionDraft {
   question: Question
 }
 
+const questionPlaceholders = {
+  choice: {
+    id: 'next_action',
+    instructions: '判断此用户下一步最可能采取的动作',
+    criteria: [
+      ['purchase', '完成付款'],
+      ['compare', '继续比较套餐'],
+      ['leave', '离开结算页'],
+    ],
+  },
+  score: {
+    id: 'purchase_signals',
+    instructions: '分别评估以下购买信号，返回概率',
+    criteria: ['价格接受度', '产品匹配度', '购买紧迫度'],
+  },
+  noul: {
+    id: 'ready_to_buy',
+    instructions: '判断用户是否已经准备好购买',
+    true: '已有明确购买意愿与足够信息',
+    false: '仍有明显疑虑或缺少关键信息',
+  },
+} as const
+
+const emptyChoiceKey = (index: number) => `__empty_option_${index}`
+
 const emptyQuestion = (type: Question['type'] = 'choice'): Question => {
   if (type === 'choice') {
-    return { type, instructions: '', criteria: { option_a: '', option_b: '' } }
+    return {
+      type,
+      instructions: '',
+      criteria: {
+        [emptyChoiceKey(1)]: '',
+        [emptyChoiceKey(2)]: '',
+        [emptyChoiceKey(3)]: '',
+      },
+    }
   }
   if (type === 'score') {
-    return { type, instructions: '', criteria: ['', ''] }
+    return { type, instructions: '', criteria: ['', '', ''] }
   }
   return { type, instructions: '', criteria: { true: '', false: '' } }
 }
@@ -32,7 +65,10 @@ function isQuestionComplete(question: Question) {
   if (!question.instructions.trim()) return false
   if (question.type === 'choice') {
     const entries = Object.entries(question.criteria)
-    return entries.length > 0 && entries.every(([key, value]) => key.trim() && value.trim())
+    return entries.length > 1 &&
+      entries.every(([key, value]) =>
+        key.trim() && !key.startsWith('__empty_option_') && value.trim(),
+      )
   }
   if (question.type === 'score') {
     return question.criteria.length >= 2 &&
@@ -61,6 +97,7 @@ function QuestionEditor({
   onRemove: () => void
 }) {
   const setType = (type: Question['type']) => onChange(emptyQuestion(type))
+  const placeholders = questionPlaceholders[question.type]
 
   const updateChoiceEntry = (oldKey: string, key: string, value: string) => {
     if (question.type !== 'choice') return
@@ -103,7 +140,7 @@ function QuestionEditor({
           className={idError ? 'invalid' : ''}
           aria-label={`问题 ${index + 1} 唯一 ID`}
           value={id}
-          placeholder="例如：purchase_intent"
+          placeholder={placeholders.id}
           onChange={(event) => onIdChange(event.target.value)}
         />
         {idError && <small className="field-error">{idError}</small>}
@@ -114,7 +151,7 @@ function QuestionEditor({
         <textarea
           value={question.instructions}
           rows={2}
-          placeholder="请清晰描述希望模型完成的判断"
+          placeholder={placeholders.instructions}
           onChange={(event) => onChange({ ...question, instructions: event.target.value })}
         />
       </label>
@@ -136,14 +173,14 @@ function QuestionEditor({
               <div className="criteria-row choice-row" key={`${index}-${criteriaIndex}`}>
                 <input
                   aria-label="选项键"
-                  value={key}
-                  placeholder="option_key"
+                  value={key.startsWith('__empty_option_') ? '' : key}
+                  placeholder={questionPlaceholders.choice.criteria[criteriaIndex]?.[0] ?? 'option_key'}
                   onChange={(event) => updateChoiceEntry(key, event.target.value, value)}
                 />
                 <input
                   aria-label="判断标准"
                   value={value}
-                  placeholder="描述此选项"
+                  placeholder={questionPlaceholders.choice.criteria[criteriaIndex]?.[1] ?? '描述此选项'}
                   onChange={(event) => updateChoiceEntry(key, key, event.target.value)}
                 />
                 <button
@@ -166,7 +203,7 @@ function QuestionEditor({
                 <input
                   aria-label="评估标准"
                   value={value}
-                  placeholder="例如：转化意愿"
+                  placeholder={questionPlaceholders.score.criteria[criteriaIndex] ?? '例如：转化意愿'}
                   onChange={(event) => updateListEntry(criteriaIndex, event.target.value)}
                 />
                 <button
@@ -192,7 +229,7 @@ function QuestionEditor({
                   <input
                     aria-label="为真边界"
                     value={question.criteria.true}
-                    placeholder="什么情况下判断为 true"
+                    placeholder={questionPlaceholders.noul.true}
                     onChange={(event) =>
                       onChange({
                         ...question,
@@ -206,7 +243,7 @@ function QuestionEditor({
                   <input
                     aria-label="为假边界"
                     value={question.criteria.false}
-                    placeholder="什么情况下判断为 false"
+                    placeholder={questionPlaceholders.noul.false}
                     onChange={(event) =>
                       onChange({
                         ...question,
@@ -225,8 +262,8 @@ function QuestionEditor({
           onClick={() => {
             if (question.type === 'choice') {
               let n = Object.keys(question.criteria).length + 1
-              let key = `option_${n}`
-              while (key in question.criteria) key = `option_${++n}`
+              let key = emptyChoiceKey(n)
+              while (key in question.criteria) key = emptyChoiceKey(++n)
               onChange({ ...question, criteria: { ...question.criteria, [key]: '' } })
             } else if (question.type === 'score') {
               onChange({ ...question, criteria: [...question.criteria, ''] })
@@ -256,7 +293,9 @@ export default function App() {
   const [showApiKey, setShowApiKey] = useState(false)
   const [stateText, setStateText] = useState('')
   const [questions, setQuestions] = useState<QuestionDraft[]>([
-    { id: '', question: { type: 'noul', instructions: '' } },
+    { id: '', question: emptyQuestion('choice') },
+    { id: '', question: emptyQuestion('score') },
+    { id: '', question: emptyQuestion('noul') },
   ])
   const [result, setResult] = useState<ApiResult | null>(null)
   const [error, setError] = useState('')
@@ -300,6 +339,10 @@ export default function App() {
     }
     if (!questions.length) {
       setError('请至少添加一个问题。')
+      return
+    }
+    if (!questions.every(({ question }) => isQuestionComplete(question))) {
+      setError('请填写完整的问题、指令与判断标准。')
       return
     }
     const invalidId = idErrors.find(Boolean)
@@ -392,11 +435,7 @@ export default function App() {
           className="secondary-button"
           type="button"
           onClick={() => {
-            let number = questions.length + 1
-            let id = `question_${number}`
-            const existingIds = new Set(questions.map((item) => item.id))
-            while (existingIds.has(id)) id = `question_${++number}`
-            setQuestions([...questions, { id, question: emptyQuestion() }])
+            setQuestions([...questions, { id: '', question: emptyQuestion() }])
           }}
         >
           ＋ 新增问题
