@@ -529,6 +529,12 @@ export default function App() {
                 onChange={(event) => setStateText(event.target.value)}
               />
             </label>
+            <div className="state-guide">
+              <strong>填写说明</strong>
+              <span>State 必须是合法 JSON；普通文本请使用英文双引号包裹。</span>
+              <code>{`"待判断文本"`}</code>
+              <code>{`{"text":"待判断文本","context":"相关语境"}`}</code>
+            </div>
             <div className={`json-status ${stateError ? 'bad' : ''}`}>
               {!stateText.trim()
                 ? '等待输入 State'

@@ -254,6 +254,29 @@ input.invalid, .code-editor.invalid { border-color: var(--red); }
   font: 12px/1.7 var(--mono);
   tab-size: 2;
 }
+.state-guide {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  color: var(--muted);
+  background: rgba(108,124,255,.045);
+  border: 1px solid rgba(108,124,255,.16);
+  border-radius: 8px;
+  font-size: 11px;
+  line-height: 1.55;
+}
+.state-guide strong { color: #b9c5ff; font-size: 11px; }
+.state-guide code {
+  padding: 2px 6px;
+  color: #a9eaff;
+  background: #080d17;
+  border: 1px solid #22314b;
+  border-radius: 5px;
+  font: 10px/1.5 var(--mono);
+}
 .json-status { display: flex; align-items: center; gap: 7px; margin-top: 9px; color: var(--green); font: 10px var(--mono); }
 .json-status::before { width: 6px; height: 6px; content: ""; background: currentColor; border-radius: 50%; box-shadow: 0 0 8px currentColor; }
 .json-status.bad { color: var(--red); }
