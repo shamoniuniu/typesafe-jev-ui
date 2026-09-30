@@ -1,6 +1,6 @@
 import { FormEvent, useMemo, useState } from 'react'
 import { BatchMode } from './BatchMode'
-import type { ApiResult, Question, SystemOneAnswer, SystemOneRequest } from './types'
+import { getApiErrorMessage, type ApiResult, type Question, type SystemOneAnswer, type SystemOneRequest } from './types'
 
 const sampleState = {
   user: { id: 'demo-42', tier: 'pro', locale: 'zh-CN' },
@@ -150,7 +150,10 @@ function QuestionEditor({
       <label>
         唯一 ID
         <input
-          className={idError ? 'invalid' : ''}
+          className={[
+            idError ? 'invalid' : '',
+            sampleInputValues.has(id) ? 'sample-value' : '',
+          ].filter(Boolean).join(' ')}
           aria-label={`问题 ${index + 1} 唯一 ID`}
           value={id}
           placeholder="例如：purchase_intent"
@@ -163,6 +166,7 @@ function QuestionEditor({
       <label>
         指令
         <textarea
+          className={sampleInputValues.has(question.instructions) ? 'sample-value' : ''}
           value={question.instructions}
           rows={2}
           placeholder="清晰描述希望模型完成的判断"
@@ -190,6 +194,7 @@ function QuestionEditor({
           ? Object.entries(question.criteria).map(([key, value], criteriaIndex) => (
               <div className="criteria-row choice-row" key={`${index}-${criteriaIndex}`}>
                 <input
+                  className={sampleInputValues.has(key) ? 'sample-value' : ''}
                   aria-label="选项键"
                   value={key}
                   placeholder="option_key"
@@ -198,6 +203,7 @@ function QuestionEditor({
                   onChange={(event) => updateChoiceEntry(key, event.target.value, value)}
                 />
                 <input
+                  className={sampleInputValues.has(value) ? 'sample-value' : ''}
                   aria-label="判断标准"
                   value={value}
                   placeholder="描述此选项"
@@ -223,6 +229,7 @@ function QuestionEditor({
             ? question.criteria.map((value, criteriaIndex) => (
               <div className="criteria-row" key={`${index}-${criteriaIndex}`}>
                 <input
+                  className={sampleInputValues.has(value) ? 'sample-value' : ''}
                   aria-label="评估标准"
                   value={value}
                   placeholder="例如：转化意愿"
@@ -251,6 +258,9 @@ function QuestionEditor({
                 <label>
                   true · 为真边界
                   <input
+                    className={
+                      sampleInputValues.has(question.criteria.true) ? 'sample-value' : ''
+                    }
                     aria-label="为真边界"
                     value={question.criteria.true}
                     placeholder="什么情况下判断为 true"
@@ -272,6 +282,9 @@ function QuestionEditor({
                 <label>
                   false · 为假边界
                   <input
+                    className={
+                      sampleInputValues.has(question.criteria.false) ? 'sample-value' : ''
+                    }
                     aria-label="为假边界"
                     value={question.criteria.false}
                     placeholder="什么情况下判断为 false"
@@ -396,7 +409,7 @@ export default function App() {
       })
       const body = (await response.json()) as ApiResult
       if (!response.ok) {
-        const message = typeof body.error === 'string' ? body.error : `请求失败 (${response.status})`
+        const message = getApiErrorMessage(body, response.status)
         throw new Error(message)
       }
       setResult(body)
@@ -557,7 +570,11 @@ export default function App() {
             <label>
               State · JSON
               <textarea
-                className={`code-editor ${stateError ? 'invalid' : ''}`}
+                className={[
+                  'code-editor',
+                  stateError ? 'invalid' : '',
+                  stateText === sampleStateText ? 'sample-value' : '',
+                ].filter(Boolean).join(' ')}
                 value={stateText}
                 rows={15}
                 spellCheck={false}
