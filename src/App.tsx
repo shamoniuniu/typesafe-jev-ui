@@ -378,7 +378,7 @@ export default function App() {
 
     const payload: SystemOneRequest = {
       state: JSON.parse(stateText),
-      model: 'bocha-jev-v1',
+      model: 'jev-latest',
       questions: Object.fromEntries(
         questions.map(({ id, question }) => [id.trim(), question]),
       ),
@@ -576,7 +576,7 @@ export default function App() {
         </div>
 
         <div className="submit-bar">
-          <div><strong>bocha-jev-v1</strong><span>固定模型版本</span></div>
+          <div><strong>jev-latest</strong><span>固定模型版本</span></div>
           <button className="primary-button" type="submit" disabled={loading}>
             {loading ? <><i className="spinner" /> 正在推理</> : '发送决策请求 →'}
           </button>
