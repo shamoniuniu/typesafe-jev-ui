@@ -238,7 +238,6 @@ textarea:focus, input:focus, select:focus {
 }
 textarea:disabled, input:disabled, select:disabled { cursor: not-allowed; opacity: .55; }
 textarea::placeholder, input::placeholder { color: #596783; opacity: 1; }
-.sample-value { color: #596783; }
 input.invalid, .code-editor.invalid { border-color: var(--red); }
 .field-error { display: block; margin: 5px 0 0; color: var(--red); font-weight: 400; }
 .code-editor {

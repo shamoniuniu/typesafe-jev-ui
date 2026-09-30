@@ -18,56 +18,6 @@ interface QuestionDraft {
   question: Question
 }
 
-const sampleQuestions: QuestionDraft[] = [
-  {
-    id: 'next_action',
-    question: {
-      type: 'choice',
-      instructions: '判断此用户下一步最可能采取的动作',
-      criteria: {
-        purchase: '完成付款',
-        compare: '继续比较套餐',
-        leave: '离开结算页',
-      },
-    },
-  },
-  {
-    id: 'purchase_signals',
-    question: {
-      type: 'score',
-      instructions: '分别评估以下购买信号，返回概率',
-      criteria: ['价格接受度', '产品匹配度', '购买紧迫度'],
-    },
-  },
-  {
-    id: 'ready_to_buy',
-    question: {
-      type: 'noul',
-      instructions: '判断用户是否已经准备好购买',
-      criteria: {
-        true: '已有明确购买意愿与足够信息',
-        false: '仍有明显疑虑或缺少关键信息',
-      },
-    },
-  },
-]
-
-const sampleInputValues = new Set([
-  ...sampleQuestions.map(({ id }) => id),
-  ...sampleQuestions.map(({ question }) => question.instructions),
-  ...sampleQuestions.flatMap(({ question }) => {
-    if (question.type === 'choice') {
-      return Object.entries(question.criteria).flat()
-    }
-    if (question.type === 'score') return question.criteria
-    return question.criteria ? [question.criteria.true, question.criteria.false] : []
-  }),
-])
-
-const clearIfSample = (value: string, clear: () => void) => {
-  if (sampleInputValues.has(value)) clear()
-}
-
 const emptyQuestion = (type: Question['type'] = 'choice'): Question => {
   if (type === 'choice') {
     return { type, instructions: '', criteria: { option_a: '', option_b: '' } }
@@ -150,14 +100,10 @@ function QuestionEditor({
       <label>
         唯一 ID
         <input
-          className={[
-            idError ? 'invalid' : '',
-            sampleInputValues.has(id) ? 'sample-value' : '',
-          ].filter(Boolean).join(' ')}
+          className={idError ? 'invalid' : ''}
           aria-label={`问题 ${index + 1} 唯一 ID`}
           value={id}
           placeholder="例如：purchase_intent"
-          onFocus={() => clearIfSample(id, () => onIdChange(''))}
           onChange={(event) => onIdChange(event.target.value)}
         />
         {idError && <small className="field-error">{idError}</small>}
@@ -166,14 +112,9 @@ function QuestionEditor({
       <label>
         指令
         <textarea
-          className={sampleInputValues.has(question.instructions) ? 'sample-value' : ''}
           value={question.instructions}
           rows={2}
-          placeholder="清晰描述希望模型完成的判断"
-          onFocus={() =>
-            clearIfSample(question.instructions, () =>
-              onChange({ ...question, instructions: '' }),
-            )}
+          placeholder="请清晰描述希望模型完成的判断"
           onChange={(event) => onChange({ ...question, instructions: event.target.value })}
         />
       </label>
@@ -194,21 +135,15 @@ function QuestionEditor({
           ? Object.entries(question.criteria).map(([key, value], criteriaIndex) => (
               <div className="criteria-row choice-row" key={`${index}-${criteriaIndex}`}>
                 <input
-                  className={sampleInputValues.has(key) ? 'sample-value' : ''}
                   aria-label="选项键"
                   value={key}
                   placeholder="option_key"
-                  onFocus={() =>
-                    clearIfSample(key, () => updateChoiceEntry(key, '', value))}
                   onChange={(event) => updateChoiceEntry(key, event.target.value, value)}
                 />
                 <input
-                  className={sampleInputValues.has(value) ? 'sample-value' : ''}
                   aria-label="判断标准"
                   value={value}
                   placeholder="描述此选项"
-                  onFocus={() =>
-                    clearIfSample(value, () => updateChoiceEntry(key, key, ''))}
                   onChange={(event) => updateChoiceEntry(key, key, event.target.value)}
                 />
                 <button
@@ -229,12 +164,9 @@ function QuestionEditor({
             ? question.criteria.map((value, criteriaIndex) => (
               <div className="criteria-row" key={`${index}-${criteriaIndex}`}>
                 <input
-                  className={sampleInputValues.has(value) ? 'sample-value' : ''}
                   aria-label="评估标准"
                   value={value}
                   placeholder="例如：转化意愿"
-                  onFocus={() =>
-                    clearIfSample(value, () => updateListEntry(criteriaIndex, ''))}
                   onChange={(event) => updateListEntry(criteriaIndex, event.target.value)}
                 />
                 <button
@@ -258,19 +190,9 @@ function QuestionEditor({
                 <label>
                   true · 为真边界
                   <input
-                    className={
-                      sampleInputValues.has(question.criteria.true) ? 'sample-value' : ''
-                    }
                     aria-label="为真边界"
                     value={question.criteria.true}
                     placeholder="什么情况下判断为 true"
-                    onFocus={() =>
-                      clearIfSample(question.criteria!.true, () =>
-                        onChange({
-                          ...question,
-                          criteria: { ...question.criteria!, true: '' },
-                        }),
-                      )}
                     onChange={(event) =>
                       onChange({
                         ...question,
@@ -282,19 +204,9 @@ function QuestionEditor({
                 <label>
                   false · 为假边界
                   <input
-                    className={
-                      sampleInputValues.has(question.criteria.false) ? 'sample-value' : ''
-                    }
                     aria-label="为假边界"
                     value={question.criteria.false}
                     placeholder="什么情况下判断为 false"
-                    onFocus={() =>
-                      clearIfSample(question.criteria!.false, () =>
-                        onChange({
-                          ...question,
-                          criteria: { ...question.criteria!, false: '' },
-                        }),
-                      )}
                     onChange={(event) =>
                       onChange({
                         ...question,
@@ -342,13 +254,16 @@ export default function App() {
   const [batchBusy, setBatchBusy] = useState(false)
   const [apiKey, setApiKey] = useState('')
   const [showApiKey, setShowApiKey] = useState(false)
-  const [stateText, setStateText] = useState(sampleStateText)
-  const [questions, setQuestions] = useState<QuestionDraft[]>(sampleQuestions)
+  const [stateText, setStateText] = useState('')
+  const [questions, setQuestions] = useState<QuestionDraft[]>([
+    { id: '', question: { type: 'noul', instructions: '' } },
+  ])
   const [result, setResult] = useState<ApiResult | null>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
   const stateError = useMemo(() => {
+    if (!stateText.trim()) return ''
     try {
       JSON.parse(stateText)
       return ''
@@ -375,6 +290,10 @@ export default function App() {
     event.preventDefault()
     setError('')
     setResult(null)
+    if (!stateText.trim()) {
+      setError('请填写 state。')
+      return
+    }
     if (stateError) {
       setError(`state JSON 无效：${stateError}`)
       return
@@ -559,33 +478,24 @@ export default function App() {
           <section className="panel input-panel">
             <div className="section-title">
               <div><span>01</span><h2>输入状态</h2></div>
-              <button
-                type="button"
-                className="text-button"
-                onClick={() => setStateText(sampleStateText)}
-              >
-                恢复示例
-              </button>
             </div>
             <label>
               State · JSON
               <textarea
-                className={[
-                  'code-editor',
-                  stateError ? 'invalid' : '',
-                  stateText === sampleStateText ? 'sample-value' : '',
-                ].filter(Boolean).join(' ')}
+                className={`code-editor ${stateError ? 'invalid' : ''}`}
                 value={stateText}
                 rows={15}
                 spellCheck={false}
-                onFocus={() => {
-                  if (stateText === sampleStateText) setStateText('')
-                }}
+                placeholder={sampleStateText}
                 onChange={(event) => setStateText(event.target.value)}
               />
             </label>
             <div className={`json-status ${stateError ? 'bad' : ''}`}>
-              {stateError ? `格式错误：${stateError}` : 'JSON 格式有效'}
+              {!stateText.trim()
+                ? '等待输入 State'
+                : stateError
+                  ? `格式错误：${stateError}`
+                  : 'JSON 格式有效'}
             </div>
           </section>
 
