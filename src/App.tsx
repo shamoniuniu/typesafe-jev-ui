@@ -11,6 +11,8 @@ const sampleState = {
   },
 }
 
+const sampleStateText = JSON.stringify(sampleState, null, 2)
+
 interface QuestionDraft {
   id: string
   question: Question
@@ -49,6 +51,22 @@ const sampleQuestions: QuestionDraft[] = [
     },
   },
 ]
+
+const sampleInputValues = new Set([
+  ...sampleQuestions.map(({ id }) => id),
+  ...sampleQuestions.map(({ question }) => question.instructions),
+  ...sampleQuestions.flatMap(({ question }) => {
+    if (question.type === 'choice') {
+      return Object.entries(question.criteria).flat()
+    }
+    if (question.type === 'score') return question.criteria
+    return question.criteria ? [question.criteria.true, question.criteria.false] : []
+  }),
+])
+
+const clearIfSample = (value: string, clear: () => void) => {
+  if (sampleInputValues.has(value)) clear()
+}
 
 const emptyQuestion = (type: Question['type'] = 'choice'): Question => {
   if (type === 'choice') {
@@ -136,6 +154,7 @@ function QuestionEditor({
           aria-label={`问题 ${index + 1} 唯一 ID`}
           value={id}
           placeholder="例如：purchase_intent"
+          onFocus={() => clearIfSample(id, () => onIdChange(''))}
           onChange={(event) => onIdChange(event.target.value)}
         />
         {idError && <small className="field-error">{idError}</small>}
@@ -147,6 +166,10 @@ function QuestionEditor({
           value={question.instructions}
           rows={2}
           placeholder="清晰描述希望模型完成的判断"
+          onFocus={() =>
+            clearIfSample(question.instructions, () =>
+              onChange({ ...question, instructions: '' }),
+            )}
           onChange={(event) => onChange({ ...question, instructions: event.target.value })}
         />
       </label>
@@ -170,12 +193,16 @@ function QuestionEditor({
                   aria-label="选项键"
                   value={key}
                   placeholder="option_key"
+                  onFocus={() =>
+                    clearIfSample(key, () => updateChoiceEntry(key, '', value))}
                   onChange={(event) => updateChoiceEntry(key, event.target.value, value)}
                 />
                 <input
                   aria-label="判断标准"
                   value={value}
                   placeholder="描述此选项"
+                  onFocus={() =>
+                    clearIfSample(value, () => updateChoiceEntry(key, key, ''))}
                   onChange={(event) => updateChoiceEntry(key, key, event.target.value)}
                 />
                 <button
@@ -199,6 +226,8 @@ function QuestionEditor({
                   aria-label="评估标准"
                   value={value}
                   placeholder="例如：转化意愿"
+                  onFocus={() =>
+                    clearIfSample(value, () => updateListEntry(criteriaIndex, ''))}
                   onChange={(event) => updateListEntry(criteriaIndex, event.target.value)}
                 />
                 <button
@@ -225,6 +254,13 @@ function QuestionEditor({
                     aria-label="为真边界"
                     value={question.criteria.true}
                     placeholder="什么情况下判断为 true"
+                    onFocus={() =>
+                      clearIfSample(question.criteria!.true, () =>
+                        onChange({
+                          ...question,
+                          criteria: { ...question.criteria!, true: '' },
+                        }),
+                      )}
                     onChange={(event) =>
                       onChange({
                         ...question,
@@ -239,6 +275,13 @@ function QuestionEditor({
                     aria-label="为假边界"
                     value={question.criteria.false}
                     placeholder="什么情况下判断为 false"
+                    onFocus={() =>
+                      clearIfSample(question.criteria!.false, () =>
+                        onChange({
+                          ...question,
+                          criteria: { ...question.criteria!, false: '' },
+                        }),
+                      )}
                     onChange={(event) =>
                       onChange({
                         ...question,
@@ -286,7 +329,7 @@ export default function App() {
   const [batchBusy, setBatchBusy] = useState(false)
   const [apiKey, setApiKey] = useState('')
   const [showApiKey, setShowApiKey] = useState(false)
-  const [stateText, setStateText] = useState(JSON.stringify(sampleState, null, 2))
+  const [stateText, setStateText] = useState(sampleStateText)
   const [questions, setQuestions] = useState<QuestionDraft[]>(sampleQuestions)
   const [result, setResult] = useState<ApiResult | null>(null)
   const [error, setError] = useState('')
@@ -335,7 +378,7 @@ export default function App() {
 
     const payload: SystemOneRequest = {
       state: JSON.parse(stateText),
-      model: 'jev-latest',
+      model: 'bocha-jev-v1',
       questions: Object.fromEntries(
         questions.map(({ id, question }) => [id.trim(), question]),
       ),
@@ -506,7 +549,7 @@ export default function App() {
               <button
                 type="button"
                 className="text-button"
-                onClick={() => setStateText(JSON.stringify(sampleState, null, 2))}
+                onClick={() => setStateText(sampleStateText)}
               >
                 恢复示例
               </button>
@@ -518,6 +561,9 @@ export default function App() {
                 value={stateText}
                 rows={15}
                 spellCheck={false}
+                onFocus={() => {
+                  if (stateText === sampleStateText) setStateText('')
+                }}
                 onChange={(event) => setStateText(event.target.value)}
               />
             </label>
@@ -530,7 +576,7 @@ export default function App() {
         </div>
 
         <div className="submit-bar">
-          <div><strong>jev-latest</strong><span>固定模型版本</span></div>
+          <div><strong>bocha-jev-v1</strong><span>固定模型版本</span></div>
           <button className="primary-button" type="submit" disabled={loading}>
             {loading ? <><i className="spinner" /> 正在推理</> : '发送决策请求 →'}
           </button>
