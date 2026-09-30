@@ -284,6 +284,8 @@ function QuestionEditor({
 export default function App() {
   const [mode, setMode] = useState<'single' | 'batch'>('single')
   const [batchBusy, setBatchBusy] = useState(false)
+  const [apiKey, setApiKey] = useState('')
+  const [showApiKey, setShowApiKey] = useState(false)
   const [stateText, setStateText] = useState(JSON.stringify(sampleState, null, 2))
   const [questions, setQuestions] = useState<QuestionDraft[]>(sampleQuestions)
   const [result, setResult] = useState<ApiResult | null>(null)
@@ -343,7 +345,10 @@ export default function App() {
     try {
       const response = await fetch('/api/systemone', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(apiKey.trim() ? { 'X-TypeSafe-API-Key': apiKey.trim() } : {}),
+        },
         body: JSON.stringify(payload),
       })
       const body = (await response.json()) as ApiResult
@@ -457,13 +462,40 @@ export default function App() {
           <h1>决策请求调试台</h1>
           <p>构造结构化状态与判断问题，通过服务端安全代理获取模型结果。</p>
         </div>
-        <div className="status"><i /> API 密钥仅保留在服务端</div>
+        <div className="status"><i /> API 密钥不写入浏览器存储</div>
       </header>
 
       <nav className="mode-tabs" aria-label="请求模式">
         <button type="button" disabled={batchBusy} title={batchBusy ? '请先等待当前批次结束' : undefined} className={mode === 'single' ? 'active' : ''} onClick={() => setMode('single')}>单条模式</button>
         <button type="button" className={mode === 'batch' ? 'active' : ''} onClick={() => setMode('batch')}>批量模式</button>
       </nav>
+
+      <section className="api-key-panel" aria-label="API Key 配置">
+        <div className="api-key-copy">
+          <span className="eyebrow">CONNECTION CREDENTIAL</span>
+          <strong>API Key</strong>
+          <small>仅保存在当前页面内存，刷新后自动清除</small>
+        </div>
+        <div className="api-key-field">
+          <input
+            type={showApiKey ? 'text' : 'password'}
+            value={apiKey}
+            autoComplete="off"
+            spellCheck={false}
+            placeholder="留空则使用服务端 .env 中的密钥"
+            aria-label="API Key"
+            onChange={(event) => setApiKey(event.target.value)}
+          />
+          <button type="button" onClick={() => setShowApiKey((current) => !current)}>
+            {showApiKey ? '隐藏' : '显示'}
+          </button>
+          {apiKey && <button type="button" onClick={() => setApiKey('')}>清除</button>}
+        </div>
+        <span className={`key-source ${apiKey.trim() ? 'temporary' : ''}`}>
+          <i />
+          {apiKey.trim() ? '使用临时密钥' : '使用服务端密钥'}
+        </span>
+      </section>
 
       {mode === 'single' ? <>
       <form onSubmit={submit}>
@@ -548,13 +580,14 @@ export default function App() {
       </section>
       </> : (
         <BatchMode
+          apiKey={apiKey}
           questions={questionsRecord}
           questionsValid={questionsValid}
           questionEditor={renderQuestionPanel()}
           onBusyChange={setBatchBusy}
         />
       )}
-      <footer>密钥通过服务器环境变量读取，不会发送到浏览器。</footer>
+      <footer>界面密钥仅驻留当前页面内存，并通过本地服务端代理转发。</footer>
     </main>
   )
 }

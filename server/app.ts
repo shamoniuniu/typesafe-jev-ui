@@ -92,9 +92,12 @@ export function createApp(fetchImpl: typeof fetch = fetch) {
       return
     }
 
-    const apiKey = process.env.TYPESAFE_API_KEY
+    const temporaryApiKey = req.get('x-typesafe-api-key')?.trim()
+    const apiKey = temporaryApiKey || process.env.TYPESAFE_API_KEY
     if (!apiKey) {
-      res.status(503).json({ error: '服务端尚未配置 TYPESAFE_API_KEY。' })
+      res.status(503).json({
+        error: '请在界面填写 API Key，或在服务端配置 TYPESAFE_API_KEY。',
+      })
       return
     }
 

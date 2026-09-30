@@ -77,7 +77,28 @@ describe('POST /api/systemone', () => {
     const response = await request(createApp()).post('/api/systemone').send(validPayload)
 
     expect(response.status).toBe(503)
-    expect(response.body.error).toContain('TYPESAFE_API_KEY')
+    expect(response.body.error).toContain('API Key')
+  })
+
+  it('优先使用界面传入的临时密钥且不写入请求体', async () => {
+    process.env.TYPESAFE_API_KEY = 'server-key'
+    const mockFetch = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(JSON.stringify({ answers: {} }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+
+    await request(createApp(mockFetch))
+      .post('/api/systemone')
+      .set('X-TypeSafe-API-Key', 'temporary-browser-key')
+      .send(validPayload)
+
+    const [, options] = mockFetch.mock.calls[0]
+    expect((options?.headers as Record<string, string>).Authorization).toBe(
+      'Bearer temporary-browser-key',
+    )
+    expect(JSON.parse(String(options?.body))).toEqual(validPayload)
   })
 
   it('携带 Bearer 密钥并透传上游 JSON', async () => {

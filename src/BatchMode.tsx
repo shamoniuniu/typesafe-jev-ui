@@ -19,11 +19,13 @@ interface BatchResponse {
 }
 
 export function BatchMode({
+  apiKey,
   questions,
   questionsValid,
   questionEditor,
   onBusyChange,
 }: {
+  apiKey: string
   questions: Record<string, Question>
   questionsValid: boolean
   questionEditor: ReactNode
@@ -93,7 +95,10 @@ export function BatchMode({
     const payload: SystemOneRequest = { state, model: 'jev-latest', questions }
     const response = await fetch('/api/systemone', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(apiKey.trim() ? { 'X-TypeSafe-API-Key': apiKey.trim() } : {}),
+      },
       body: JSON.stringify(payload),
     })
     let body: ApiResult
